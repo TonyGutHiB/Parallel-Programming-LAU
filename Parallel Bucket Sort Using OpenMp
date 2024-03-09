@@ -1,0 +1,74 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <omp.h>
+
+#define MAX_VALUE 1000
+#define NUM_BUCKETS 10
+#define NUM_THREADS 4
+#define N 100 
+
+typedef struct {
+    int size;
+    int *array;
+} Bucket;
+
+
+int compare_ints(const void *a, const void *b) {
+    return (*(int *)a - *(int *)b);
+}
+
+
+void init_buckets(Bucket *buckets, int num_buckets) {
+    for (int i = 0; i < num_buckets; ++i) {
+        buckets[i].size = 0;
+        buckets[i].array = (int *)malloc(sizeof(int) * N); // assume each bucket could potentially contain all elements
+    }
+}
+
+
+void place_into_buckets(int *array, Bucket *buckets, int num_buckets) {
+    for (int i = 0; i < N; ++i) {
+        int index = array[i] / (MAX_VALUE / num_buckets);
+        buckets[index].array[buckets[index].size++] = array[i];
+    }
+}
+
+
+void merge_buckets(Bucket *buckets, int num_buckets, int *array) {
+    int index = 0;
+    for (int i = 0; i < num_buckets; ++i) {
+        for (int j = 0; j < buckets[i].size; ++j) {
+            array[index++] = buckets[i].array[j];
+        }
+        free(buckets[i].array);
+    }
+}
+
+int main() {
+    int *array = malloc(N * sizeof(int));
+    Bucket buckets[NUM_BUCKETS];
+    
+    for (int i = 0; i < N; ++i) {
+        array[i] = rand() % MAX_VALUE;
+    }
+    
+    init_buckets(buckets, NUM_BUCKETS);
+    place_into_buckets(array, buckets, NUM_BUCKETS);
+
+
+    #pragma omp parallel for num_threads(NUM_THREADS) default(none) shared(buckets)
+    for (int i = 0; i < NUM_BUCKETS; i++) {
+        qsort(buckets[i].array, buckets[i].size, sizeof(int), compare_ints);
+    }
+
+    merge_buckets(buckets, NUM_BUCKETS, array);
+    
+  
+    for (int i = 0; i < N; ++i) {
+        printf("%d ", array[i]);
+    }
+    printf("\n");
+    
+    free(array);
+    return 0;
+}
