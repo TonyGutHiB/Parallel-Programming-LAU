@@ -1,0 +1,56 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+
+#define MAX_VALUE 1000
+#define NUM_BUCKETS 10
+#define NUM_THREADS 4
+#define N 100 
+
+typedef struct {
+    int size;
+    int capacity;
+    int *array;
+} Bucket;
+
+typedef struct {
+    Bucket *buckets;
+    int id;
+} ThreadArg;
+
+
+int compare_ints(const void *a, const void *b) {
+    return (*(int *)a - *(int *)b);
+}
+
+
+void *sort_bucket(void *arg) {
+    ThreadArg *thread_arg = (ThreadArg *)arg;
+    Bucket *bucket = &thread_arg->buckets[thread_arg->id];
+    qsort(bucket->array, bucket->size, sizeof(int), compare_ints);
+    pthread_exit(NULL);
+}
+
+int main() {
+    int *array = malloc(N * sizeof(int));
+    Bucket buckets[NUM_BUCKETS];
+    pthread_t threads[NUM_THREADS];
+    ThreadArg thread_args[NUM_THREADS];
+    
+   
+    for (int i = 0; i < N; ++i) {
+        array[i] = rand() % MAX_VALUE;
+    }
+    
+    
+    for (int i = 0; i < NUM_BUCKETS; ++i) {
+        buckets[i].size = 0;
+        buckets[i].capacity = N; // assume each bucket could potentially contain all elements
+        buckets[i].array = (int *)malloc(sizeof(int) * buckets[i].capacity);
+    }
+    
+    
+    for (int i = 0; i < N; ++i) {
+        int index = array[i] / (MAX_VALUE / NUM_BUCKETS);
+        if (buckets[index].size < buckets[index].capacity) {
+            buckets[index].array[buckets[index].size
