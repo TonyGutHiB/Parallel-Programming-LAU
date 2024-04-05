@@ -1,0 +1,52 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define TILE_SIZE 16
+
+void matrixMultiplication(int* matrixA, int* matrixB, int* matrixC, int rowsA, int columnsA, int columnsB) {
+    #pragma acc parallel loop collapse(2) present(matrixA[:rowsA*columnsA], matrixB[:columnsA*columnsB], matrixC[:rowsA*columnsB])
+    for (int row = 0; row < rowsA; ++row) {
+        for (int col = 0; col < columnsB; ++col) {
+            int result = 0;
+            for (int k = 0; k < columnsA; ++k) {
+                result += matrixA[row * columnsA + k] * matrixB[k * columnsB + col];
+            }
+            matrixC[row * columnsB + col] = result;
+        }
+    }
+}
+
+int main() {
+    int rowsA, columnsA, columnsB;
+
+    printf("Enter the dimensions of matrix A (rowsA): ");
+    scanf("%d", &rowsA);
+    printf("Enter the dimensions of matrix B (columnsA x columnsB): ");
+    scanf("%d %d", &columnsA, &columnsB);
+
+    int* matrixA, * matrixB, * matrixC;
+
+    matrixA = (int*)malloc(rowsA * columnsA * sizeof(int));
+    matrixB = (int*)malloc(columnsA * columnsB * sizeof(int));
+    matrixC = (int*)malloc(rowsA * columnsB * sizeof(int));
+
+    srand(time(NULL));
+    for (int i = 0; i < rowsA * columnsA; ++i) {
+        matrixA[i] = rand() % 10;
+    }
+    for (int i = 0; i < columnsA * columnsB; ++i) {
+        matrixB[i] = rand() % 10;
+    }
+
+    double start = omp_get_wtime();
+    matrixMultiplication(matrixA, matrixB, matrixC, rowsA, columnsA, columnsB);
+    double end = omp_get_wtime();
+    printf("Time: %f seconds\n", end - start);
+
+    free(matrixA);
+    free(matrixB);
+    free(matrixC);
+
+    return 0;
+}
